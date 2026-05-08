@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OS — Evans Automation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/os.css">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="EA OS">
+<link rel="apple-touch-icon" href="assets/logo.jpeg">
+</head>
+<body>
+<canvas id="bgCanvas"></canvas>
+
+<div class="wrap">
+
+  <!-- ── Sidebar ──────────────────────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <img class="sb-logo-img" src="assets/logo.jpeg" alt="" onerror="this.style.display='none'">
+      <div class="sb-name">Evans OS<span>Personal Command Centre</span></div>
+    </div>
+
+    <nav class="nav-items">
+      <button class="nav-btn active" onclick="navigate('home')" id="nav-home">
+        <span class="nav-icon">⌂</span><span class="nav-label">Home</span>
+      </button>
+      <button class="nav-btn" onclick="navigate('instagram')" id="nav-instagram">
+        <span class="nav-icon">◈</span><span class="nav-label">Instagram</span>
+      </button>
+      <button class="nav-btn" onclick="navigate('clients')" id="nav-clients">
+        <span class="nav-icon">♟</span><span class="nav-label">Clients</span>
+      </button>
+      <button class="nav-btn" onclick="navigate('ai-chat')" id="nav-ai-chat">
+        <span class="nav-icon">✦</span><span class="nav-label">AI Chat</span>
+      </button>
+      <button class="nav-btn" onclick="navigate('cold-calls')" id="nav-cold-calls">
+        <span class="nav-icon">☎</span><span class="nav-label">Cold Calls</span>
+      </button>
+      <button class="nav-btn" onclick="navigate('leads')" id="nav-leads">
+        <span class="nav-icon">◉</span><span class="nav-label">Leads</span>
+      </button>
+    </nav>
+
+    <div class="sb-footer">
+      <div class="user-row">
+        <strong id="sb-user-name">—</strong>
+        <span id="sb-user-email">—</span>
+      </div>
+      <button class="btn-signout" onclick="osLogout()">
+        <span>⎋</span> Sign Out
+      </button>
+    </div>
+  </aside>
+
+  <!-- ── Main content ──────────────────────────────────────────────────── -->
+  <main class="main">
+
+    <!-- HOME ─────────────────────────────────────────────────────────── -->
+    <section class="section active" id="sec-home">
+      <div class="page-header">
+        <h1 class="page-title">Good <span id="greeting-time">morning</span>, <span id="greeting-name">Ethan</span> 👋</h1>
+        <p class="page-sub" id="greeting-date">—</p>
+      </div>
+
+      <div class="quick-actions">
+        <button class="qa-btn" onclick="navigate('leads'); setTimeout(()=>openNewLeadModal(),100)">
+          <span class="qa-icon">+</span> New Lead
+        </button>
+        <button class="qa-btn" onclick="navigate('cold-calls'); setTimeout(()=>openLogCallModal(),100)">
+          <span class="qa-icon">☎</span> Log Call
+        </button>
+        <button class="qa-btn" onclick="navigate('instagram'); setTimeout(()=>openAddPostModal(),100)">
+          <span class="qa-icon">◈</span> Add Post
+        </button>
+        <button class="qa-btn" onclick="navigate('ai-chat')">
+          <span class="qa-icon">✦</span> Ask AI
+        </button>
+      </div>
+
+      <div class="bento">
+        <div class="bento-card bento-stat">
+          <div class="bento-icon">♟</div>
+          <div class="b-value" id="home-stat-clients">—</div>
+          <div class="b-label">Active Clients</div>
+        </div>
+        <div class="bento-card bento-stat">
+          <div class="bento-icon">◉</div>
+          <div class="b-value" id="home-stat-leads">—</div>
+          <div class="b-label">Leads This Month</div>
+        </div>
+        <div class="bento-card bento-stat">
+          <div class="bento-icon">☎</div>
+          <div class="b-value" id="home-stat-calls">—</div>
+          <div class="b-label">Calls This Week</div>
+        </div>
+        <div class="bento-card bento-stat">
+          <div class="bento-icon">◈</div>
+          <div class="b-value" id="home-stat-ig">—</div>
+          <div class="b-label">Avg Engagement Rate</div>
+        </div>
+
+        <div class="bento-card bento-2">
+          <div class="card-title">Recent Leads <span class="badge badge-purple" id="leads-count-badge">0</span></div>
+          <div class="activity-feed" id="home-recent-leads">
+            <div class="empty"><div class="empty-icon">◉</div><p class="empty-text">No leads yet</p></div>
+          </div>
+        </div>
+
+        <div class="bento-card bento-2">
+          <div class="card-title">Recent Calls <span class="badge badge-amber" id="calls-count-badge">0</span></div>
+          <div class="activity-feed" id="home-recent-calls">
+            <div class="empty"><div class="empty-icon">☎</div><p class="empty-text">No calls logged yet</p></div>
+          </div>
+        </div>
+
+        <div class="bento-card bento-2">
+          <div class="card-title">Callbacks Due</div>
+          <div id="home-callbacks">
+            <div class="empty"><div class="empty-icon">📅</div><p class="empty-text">No callbacks scheduled</p></div>
+          </div>
+        </div>
+
+        <div class="bento-card bento-2">
+          <div class="card-title">Top Instagram Posts</div>
+          <div id="home-top-posts">
+            <div class="empty"><div class="empty-icon">◈</div><p class="empty-text">Add posts to see analytics</p></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- INSTAGRAM ────────────────────────────────────────────────────── -->
+    <section class="section" id="sec-instagram">
+      <div class="page-header">
+        <h1 class="page-title"><span>Instagram</span> Analytics</h1>
+        <p class="page-sub">Track, compare, and improve your content performance</p>
+      </div>
+
+      <!-- Setup guide (shown until connected) -->
+      <div class="ig-setup-card" id="ig-setup-banner" style="display:none">
+        <div class="ig-setup-icon">📱</div>
+        <div class="ig-setup-title">Connect Instagram for Auto-Sync</div>
+        <div class="ig-setup-sub">Manually add posts below, or connect Instagram Graph API to sync automatically.</div>
+        <button class="btn btn-ghost btn-sm" onclick="openIgSetupModal()">View Setup Guide</button>
+      </div>
+
+      <div class="sec-title-row">
+        <div>
+          <h2 class="sec-title">Performance Overview</h2>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="openAddPostModal()">+ Add Post</button>
+          <button class="btn btn-primary btn-sm" onclick="openIgSyncModal()" id="ig-sync-btn" style="display:none">↻ Sync Posts</button>
+        </div>
+      </div>
+
+      <div class="stats-row" id="ig-stats-row">
+        <div class="stat-card"><div class="stat-value" id="ig-stat-posts">0</div><div class="stat-label">Total Posts</div></div>
+        <div class="stat-card"><div class="stat-value" id="ig-stat-avg-likes">0</div><div class="stat-label">Avg Likes</div></div>
+        <div class="stat-card"><div class="stat-value" id="ig-stat-avg-comments">0</div><div class="stat-label">Avg Comments</div></div>
+        <div class="stat-card"><div class="stat-value" id="ig-stat-eng">0%</div><div class="stat-label">Avg Engagement</div></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+        <div class="chart-wrap">
+          <div class="chart-title">Engagement Over Time</div>
+          <canvas id="ig-chart-engagement"></canvas>
+        </div>
+        <div class="chart-wrap">
+          <div class="chart-title">Likes vs Comments Per Post</div>
+          <canvas id="ig-chart-breakdown"></canvas>
+        </div>
+      </div>
+
+      <div class="sec-title-row">
+        <h2 class="sec-title">Your Posts</h2>
+        <div class="search-wrap" style="max-width:220px">
+          <span class="search-icon">🔍</span>
+          <input class="search-input" type="search" placeholder="Search posts…" id="ig-search" oninput="filterPosts()">
+        </div>
+      </div>
+
+      <div class="ig-post-grid" id="ig-post-grid">
+        <div style="grid-column:1/-1" class="empty"><div class="empty-icon">◈</div><p class="empty-text">No posts yet — add your first one</p></div>
+      </div>
+    </section>
+
+    <!-- CLIENTS ──────────────────────────────────────────────────────── -->
+    <section class="section" id="sec-clients">
+      <div class="page-header">
+        <h1 class="page-title"><span>Clients</span> Overview</h1>
+        <p class="page-sub">Your active Evans Automation clients</p>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-value" id="cl-stat-total">—</div><div class="stat-label">Total Clients</div></div>
+        <div class="stat-card"><div class="stat-value" id="cl-stat-calls">—</div><div class="stat-label">Calls This Month</div></div>
+        <div class="stat-card"><div class="stat-value" id="cl-stat-revenue">—</div><div class="stat-label">Revenue This Month</div></div>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input class="search-input" type="search" placeholder="Search clients…" id="cl-search" oninput="filterClients()">
+        </div>
+        <a href="https://client.portal.evans-automation.com/admin.html" class="btn btn-ghost btn-sm" target="_blank">Open Admin Panel ↗</a>
+      </div>
+
+      <div class="client-grid" id="client-grid">
+        <div style="grid-column:1/-1" class="empty"><div class="empty-icon">⌛</div></div>
+      </div>
+    </section>
+
+    <!-- AI CHAT ──────────────────────────────────────────────────────── -->
+    <section class="section" id="sec-ai-chat">
+      <div class="page-header">
+        <h1 class="page-title"><span>AI</span> Assistant</h1>
+        <p class="page-sub">Ask anything about your business, strategy, or clients</p>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div></div>
+        <button class="btn btn-ghost btn-sm" onclick="clearChat()">Clear Chat</button>
+      </div>
+
+      <div class="chat-container">
+        <div class="chat-messages" id="chat-messages">
+          <div class="chat-empty" id="chat-empty">
+            <div style="font-size:48px">✦</div>
+            <div class="chat-empty-title">Your <span>Evans AI</span> is ready</div>
+            <p style="font-size:13px;color:var(--muted);text-align:center;max-width:380px">Ask me anything about your business — clients, pricing, strategy, growth, or how to handle a situation.</p>
+            <div class="chat-suggestions">
+              <div class="chat-suggestion" onclick="sendSuggestion(this)">How can I get more clients?</div>
+              <div class="chat-suggestion" onclick="sendSuggestion(this)">What should I charge for a new client?</div>
+              <div class="chat-suggestion" onclick="sendSuggestion(this)">Write a follow-up message for a warm lead</div>
+              <div class="chat-suggestion" onclick="sendSuggestion(this)">How do I explain voice AI to a sceptical prospect?</div>
+              <div class="chat-suggestion" onclick="sendSuggestion(this)">What are my best upsell opportunities?</div>
+              <div class="chat-suggestion" onclick="sendSuggestion(this)">Help me plan this month's outreach</div>
+            </div>
+          </div>
+        </div>
+        <div class="chat-input-area">
+          <textarea class="chat-input" id="chat-input" placeholder="Ask anything about your business…" rows="1" onkeydown="chatKeyDown(event)" oninput="autoResizeChat(this)"></textarea>
+          <button class="chat-send" id="chat-send-btn" onclick="sendChat()">➤</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- COLD CALLS ───────────────────────────────────────────────────── -->
+    <section class="section" id="sec-cold-calls">
+      <div class="page-header">
+        <h1 class="page-title"><span>Cold Calls</span> Tracker</h1>
+        <p class="page-sub">Log calls, track outcomes, and follow up on callbacks</p>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-value" id="cc-stat-week">—</div><div class="stat-label">Calls This Week</div></div>
+        <div class="stat-card"><div class="stat-value" id="cc-stat-month">—</div><div class="stat-label">Calls This Month</div></div>
+        <div class="stat-card"><div class="stat-value" id="cc-stat-cb-rate">—</div><div class="stat-label">Callback Rate</div></div>
+        <div class="stat-card"><div class="stat-value" id="cc-stat-int-rate">—</div><div class="stat-label">Interest Rate</div></div>
+      </div>
+
+      <div id="cc-callbacks-alert" style="display:none" class="callback-alert">
+        <span class="callback-alert-icon">📅</span>
+        <div class="callback-alert-text">
+          <strong id="cc-callbacks-count">0 callbacks due today</strong>
+          <span id="cc-callbacks-list">—</span>
+        </div>
+      </div>
+
+      <div class="sec-title-row">
+        <h2 class="sec-title">Call Log</h2>
+        <button class="btn btn-primary btn-sm" onclick="openLogCallModal()">+ Log a Call</button>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input class="search-input" type="search" placeholder="Search company…" id="cc-search" oninput="filterCalls()">
+        </div>
+        <div class="filter-pills">
+          <button class="filter-pill active" onclick="setCcFilter('all',this)">All</button>
+          <button class="filter-pill" onclick="setCcFilter('interested',this)">Interested</button>
+          <button class="filter-pill" onclick="setCcFilter('callback',this)">Callback</button>
+          <button class="filter-pill" onclick="setCcFilter('not_interested',this)">Not Interested</button>
+          <button class="filter-pill" onclick="setCcFilter('no_answer',this)">No Answer</button>
+        </div>
+        <input type="date" id="cc-date-filter" onchange="filterCalls()" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--inter);font-size:12px;padding:8px 12px;color-scheme:dark;outline:none;transition:border-color var(--tr)" onfocus="this.style.borderColor='var(--purple-hi)'" onblur="this.style.borderColor='var(--border)'">
+      </div>
+
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Company</th>
+              <th>Contact</th>
+              <th>Date</th>
+              <th>Outcome</th>
+              <th>Next Action</th>
+              <th>Notes</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="cc-tbody">
+            <tr class="no-hover"><td colspan="7"><div class="empty"><div class="empty-icon">⌛</div></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- LEADS ────────────────────────────────────────────────────────── -->
+    <section class="section" id="sec-leads">
+      <div class="page-header">
+        <h1 class="page-title"><span>Lead</span> Finder</h1>
+        <p class="page-sub">Research leads with Apify + Firecrawl and generate tailored outreach</p>
+      </div>
+
+      <div class="sec-title-row">
+        <div></div>
+        <button class="btn btn-primary btn-sm" onclick="openNewLeadModal()">+ New Lead</button>
+      </div>
+
+      <div class="lead-status-tabs">
+        <button class="lead-tab active" onclick="setLeadFilter('all',this)">All</button>
+        <button class="lead-tab" onclick="setLeadFilter('new',this)">New</button>
+        <button class="lead-tab" onclick="setLeadFilter('contacted',this)">Contacted</button>
+        <button class="lead-tab" onclick="setLeadFilter('converted',this)">Converted</button>
+        <button class="lead-tab" onclick="setLeadFilter('dead',this)">Dead</button>
+      </div>
+
+      <div class="toolbar" style="margin-bottom:16px">
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input class="search-input" type="search" placeholder="Search leads…" id="leads-search" oninput="filterLeads()">
+        </div>
+      </div>
+
+      <div id="leads-list">
+        <div class="empty"><div class="empty-icon">⌛</div></div>
+      </div>
+    </section>
+
+  </main><!-- /main -->
+</div><!-- /wrap -->
+
+<!-- ── Mobile nav ──────────────────────────────────────────────────────── -->
+<nav class="mobile-nav">
+  <button class="mobile-nav-btn active" onclick="navigate('home')" id="mnav-home">
+    <span class="mobile-nav-icon">⌂</span><span>Home</span>
+  </button>
+  <button class="mobile-nav-btn" onclick="navigate('instagram')" id="mnav-instagram">
+    <span class="mobile-nav-icon">◈</span><span>Insta</span>
+  </button>
+  <button class="mobile-nav-btn" onclick="navigate('clients')" id="mnav-clients">
+    <span class="mobile-nav-icon">♟</span><span>Clients</span>
+  </button>
+  <button class="mobile-nav-btn" onclick="navigate('ai-chat')" id="mnav-ai-chat">
+    <span class="mobile-nav-icon">✦</span><span>AI</span>
+  </button>
+  <button class="mobile-nav-btn" onclick="navigate('cold-calls')" id="mnav-cold-calls">
+    <span class="mobile-nav-icon">☎</span><span>Calls</span>
+  </button>
+  <button class="mobile-nav-btn" onclick="navigate('leads')" id="mnav-leads">
+    <span class="mobile-nav-icon">◉</span><span>Leads</span>
+  </button>
+</nav>
+
+<!-- ── Log Call Modal ───────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="log-call-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Log a Cold Call</h3>
+      <button class="modal-close" onclick="closeModal('log-call-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field"><label>Company Name *</label><input type="text" id="cc-company" placeholder="Acme Plumbing Ltd"></div>
+        <div class="field"><label>Contact Name</label><input type="text" id="cc-contact" placeholder="John Smith"></div>
+      </div>
+      <div class="form-grid">
+        <div class="field"><label>Phone Number</label><input type="tel" id="cc-phone" placeholder="07700 000000"></div>
+        <div class="field"><label>Date & Time *</label><input type="datetime-local" id="cc-datetime" style="color-scheme:dark"></div>
+      </div>
+      <div class="field">
+        <label>Outcome *</label>
+        <select id="cc-outcome">
+          <option value="">Select outcome…</option>
+          <option value="interested">Interested</option>
+          <option value="callback">Callback Requested</option>
+          <option value="not_interested">Not Interested</option>
+          <option value="no_answer">No Answer</option>
+        </select>
+      </div>
+      <div class="form-grid">
+        <div class="field"><label>Next Action</label><input type="text" id="cc-next-action" placeholder="Send follow-up email"></div>
+        <div class="field"><label>Next Action Date</label><input type="date" id="cc-next-date" style="color-scheme:dark"></div>
+      </div>
+      <div class="field"><label>Notes</label><textarea id="cc-notes" placeholder="How did the call go? What did they say?"></textarea></div>
+      <div class="alert" id="cc-modal-alert"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('log-call-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCall()" id="save-call-btn">
+        <span class="spinner"></span><span class="btn-txt">Save Call</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── New Lead Modal ───────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="new-lead-modal">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-header">
+      <h3 id="lead-modal-title">New Lead</h3>
+      <button class="modal-close" onclick="closeModal('new-lead-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <div style="background:rgba(139,60,247,0.07);border:1px solid rgba(139,60,247,0.2);border-radius:8px;padding:14px 16px;margin-bottom:18px">
+        <div style="font-family:var(--syne);font-size:12px;font-weight:600;color:var(--purple-lt);margin-bottom:8px">🔍 AI Lead Research</div>
+        <div style="display:flex;gap:8px">
+          <input type="url" id="lead-scrape-url" placeholder="https://company-website.com" style="flex:1;font-size:13px">
+          <button class="btn btn-primary btn-sm" onclick="scrapeLeadData()" id="scrape-btn">
+            <span class="spinner"></span><span class="btn-txt">Research</span>
+          </button>
+        </div>
+        <div class="scrape-progress" id="scrape-progress" style="margin-top:12px">
+          <div class="scrape-progress-title"><span class="dot dot-purple"></span> Researching lead…</div>
+          <div class="scrape-steps">
+            <div class="scrape-step" id="scrape-step-1">◦ Scraping website…</div>
+            <div class="scrape-step" id="scrape-step-2">◦ Extracting contacts…</div>
+            <div class="scrape-step" id="scrape-step-3">◦ Enriching with Apify…</div>
+            <div class="scrape-step" id="scrape-step-4">◦ Compiling results…</div>
+          </div>
+        </div>
+      </div>
+
+      <input type="hidden" id="lead-edit-id">
+      <div class="form-grid">
+        <div class="field"><label>Company Name *</label><input type="text" id="lead-company" placeholder="Acme Ltd"></div>
+        <div class="field"><label>Website</label><input type="url" id="lead-website" placeholder="https://…"></div>
+      </div>
+      <div class="form-grid">
+        <div class="field"><label>Contact Name</label><input type="text" id="lead-contact" placeholder="Jane Doe"></div>
+        <div class="field"><label>Email</label><input type="email" id="lead-email" placeholder="jane@acme.com"></div>
+      </div>
+      <div class="form-grid">
+        <div class="field"><label>Phone</label><input type="tel" id="lead-phone" placeholder="07700 000000"></div>
+        <div class="field"><label>Status</label>
+          <select id="lead-status">
+            <option value="new">New</option>
+            <option value="contacted">Contacted</option>
+            <option value="converted">Converted</option>
+            <option value="dead">Dead</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="field"><label>Instagram</label><input type="url" id="lead-instagram" placeholder="https://instagram.com/…"></div>
+        <div class="field"><label>LinkedIn</label><input type="url" id="lead-linkedin" placeholder="https://linkedin.com/…"></div>
+      </div>
+      <div class="field"><label>Notes</label><textarea id="lead-notes" placeholder="Business type, pain points, context…"></textarea></div>
+
+      <div id="outreach-section" style="margin-top:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <label style="font-family:var(--syne);font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text2)">AI Outreach Message</label>
+          <button class="btn btn-ghost btn-sm" onclick="generateOutreach()" id="gen-outreach-btn">
+            <span class="spinner"></span><span class="btn-txt">✦ Generate</span>
+          </button>
+        </div>
+        <textarea id="lead-outreach" placeholder="Click Generate to create a personalised outreach message…" style="min-height:120px;font-size:12px"></textarea>
+        <button class="copy-btn" onclick="copyOutreach()" id="copy-outreach-btn" style="display:none">⎘ Copy message</button>
+      </div>
+
+      <div class="alert" id="lead-modal-alert" style="margin-top:12px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('new-lead-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveLead()" id="save-lead-btn">
+        <span class="spinner"></span><span class="btn-txt">Save Lead</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Add Post Modal ───────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="add-post-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="post-modal-title">Add Instagram Post</h3>
+      <button class="modal-close" onclick="closeModal('add-post-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="post-edit-id">
+      <div class="field"><label>Post URL</label><input type="url" id="post-url" placeholder="https://instagram.com/p/…"></div>
+      <div class="field"><label>Caption</label><textarea id="post-caption" placeholder="Write your caption here…"></textarea></div>
+      <div class="form-grid">
+        <div class="field"><label>Date Posted *</label><input type="date" id="post-date" style="color-scheme:dark"></div>
+        <div class="field"><label>Media Type</label>
+          <select id="post-type">
+            <option value="image">Image</option>
+            <option value="video">Video / Reel</option>
+            <option value="carousel">Carousel</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="field"><label>Likes</label><input type="number" id="post-likes" placeholder="0" min="0"></div>
+        <div class="field"><label>Comments</label><input type="number" id="post-comments" placeholder="0" min="0"></div>
+      </div>
+      <div class="form-grid">
+        <div class="field"><label>Reach</label><input type="number" id="post-reach" placeholder="0" min="0"></div>
+        <div class="field"><label>Impressions</label><input type="number" id="post-impressions" placeholder="0" min="0"></div>
+      </div>
+      <div class="form-grid">
+        <div class="field"><label>Saves</label><input type="number" id="post-saves" placeholder="0" min="0"></div>
+      </div>
+
+      <div style="margin-top:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <label style="font-family:var(--syne);font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text2)">AI Analysis</label>
+          <button class="btn btn-ghost btn-sm" onclick="analysePost()" id="analyse-post-btn">
+            <span class="spinner"></span><span class="btn-txt">✦ Analyse</span>
+          </button>
+        </div>
+        <div id="post-analysis-box" style="display:none" class="outreach-box"></div>
+      </div>
+
+      <div class="alert" id="post-modal-alert" style="margin-top:12px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('add-post-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="savePost()" id="save-post-btn">
+        <span class="spinner"></span><span class="btn-txt">Save Post</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Instagram Setup Guide Modal ─────────────────────────────────────── -->
+<div class="modal-overlay" id="ig-setup-modal">
+  <div class="modal" style="max-width:620px">
+    <div class="modal-header">
+      <h3>Connect Instagram Graph API</h3>
+      <button class="modal-close" onclick="closeModal('ig-setup-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.7">Follow these steps to auto-sync your Instagram posts. Takes ~15 minutes.</p>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;gap:14px;align-items:flex-start">
+          <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,rgba(107,33,232,0.4),rgba(168,85,247,0.25));border:1px solid rgba(139,60,247,0.3);display:flex;align-items:center;justify-content:center;font-family:var(--syne);font-size:12px;font-weight:700;flex-shrink:0">1</div>
+          <div><div style="font-family:var(--syne);font-size:13px;font-weight:600;margin-bottom:3px">Create a Facebook Developer App</div><div style="font-size:12px;color:var(--muted)">Go to <strong style="color:var(--purple-lt)">developers.facebook.com</strong> → My Apps → Create App → Select "Business" type.</div></div>
+        </div>
+        <div style="display:flex;gap:14px;align-items:flex-start">
+          <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,rgba(107,33,232,0.4),rgba(168,85,247,0.25));border:1px solid rgba(139,60,247,0.3);display:flex;align-items:center;justify-content:center;font-family:var(--syne);font-size:12px;font-weight:700;flex-shrink:0">2</div>
+          <div><div style="font-family:var(--syne);font-size:13px;font-weight:600;margin-bottom:3px">Add Instagram Graph API Product</div><div style="font-size:12px;color:var(--muted)">In your app dashboard → Add Product → Instagram Graph API. Connect your Instagram Business account.</div></div>
+        </div>
+        <div style="display:flex;gap:14px;align-items:flex-start">
+          <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,rgba(107,33,232,0.4),rgba(168,85,247,0.25));border:1px solid rgba(139,60,247,0.3);display:flex;align-items:center;justify-content:center;font-family:var(--syne);font-size:12px;font-weight:700;flex-shrink:0">3</div>
+          <div><div style="font-family:var(--syne);font-size:13px;font-weight:600;margin-bottom:3px">Generate a Long-Lived Access Token</div><div style="font-size:12px;color:var(--muted)">Use the Graph API Explorer to get an access token with <code style="background:var(--surface2);padding:2px 5px;border-radius:4px;font-size:11px">instagram_basic, instagram_manage_insights</code> permissions. Exchange for a 60-day long-lived token.</div></div>
+        </div>
+        <div style="display:flex;gap:14px;align-items:flex-start">
+          <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,rgba(107,33,232,0.4),rgba(168,85,247,0.25));border:1px solid rgba(139,60,247,0.3);display:flex;align-items:center;justify-content:center;font-family:var(--syne);font-size:12px;font-weight:700;flex-shrink:0">4</div>
+          <div><div style="font-family:var(--syne);font-size:13px;font-weight:600;margin-bottom:3px">Save your token in Supabase</div><div style="font-size:12px;color:var(--muted)">Add a row to the <code style="background:var(--surface2);padding:2px 5px;border-radius:4px;font-size:11px">settings</code> table: <code style="background:var(--surface2);padding:2px 5px;border-radius:4px;font-size:11px">key = 'ig_access_token'</code>. The Sync button will appear on this page automatically.</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('ig-setup-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Lead detail modal ─────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="lead-detail-modal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <h3 id="ld-modal-company">Lead Detail</h3>
+      <button class="modal-close" onclick="closeModal('lead-detail-modal')">✕</button>
+    </div>
+    <div class="modal-body" id="ld-modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" onclick="deleteLead()" id="ld-delete-btn">Delete</button>
+      <button class="btn btn-ghost" onclick="closeModal('lead-detail-modal')">Close</button>
+      <button class="btn btn-primary btn-sm" onclick="editLeadFromDetail()">Edit Lead</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Scripts ──────────────────────────────────────────────────────────── -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="js/canvas-bg.js"></script>
+<script src="js/os-core.js"></script>
+<script src="js/clients.js"></script>
+<script src="js/ai-chat.js"></script>
+<script src="js/cold-calls.js"></script>
+<script src="js/leads.js"></script>
+<script src="js/instagram.js"></script>
+</body>
+</html>
