@@ -66,7 +66,7 @@
         <button class="qa-btn" onclick="navigate('leads'); setTimeout(()=>openNewLeadModal(),100)">
           <span class="qa-icon">+</span> New Lead
         </button>
-        <button class="qa-btn" onclick="navigate('cold-calls'); setTimeout(()=>openLogCallModal(),100)">
+        <button class="qa-btn" onclick="navigate('cold-calls'); setTimeout(()=>addNewCcRow(),200)">
           <span class="qa-icon">☎</span> Log Call
         </button>
         <button class="qa-btn" onclick="navigate('instagram'); setTimeout(()=>openAddPostModal(),100)">
@@ -250,59 +250,73 @@
     <section class="section" id="sec-cold-calls">
       <div class="page-header">
         <h1 class="page-title"><span>Cold Calls</span> Tracker</h1>
-        <p class="page-sub">Log calls, track outcomes, and follow up on callbacks</p>
+        <p class="page-sub">Import your list, log outcomes inline, never miss a follow-up</p>
       </div>
 
       <div class="stats-row">
-        <div class="stat-card"><div class="stat-value" id="cc-stat-week">—</div><div class="stat-label">Calls This Week</div></div>
-        <div class="stat-card"><div class="stat-value" id="cc-stat-month">—</div><div class="stat-label">Calls This Month</div></div>
-        <div class="stat-card"><div class="stat-value" id="cc-stat-cb-rate">—</div><div class="stat-label">Callback Rate</div></div>
-        <div class="stat-card"><div class="stat-value" id="cc-stat-int-rate">—</div><div class="stat-label">Interest Rate</div></div>
+        <div class="stat-card"><div class="stat-value" id="cc-stat-week">—</div><div class="stat-label">Added This Week</div></div>
+        <div class="stat-card"><div class="stat-value" id="cc-stat-booked">—</div><div class="stat-label">Booked</div></div>
+        <div class="stat-card"><div class="stat-value" id="cc-stat-follow">—</div><div class="stat-label">Follow Ups</div></div>
+        <div class="stat-card"><div class="stat-value" id="cc-stat-conv">—</div><div class="stat-label">Booking Rate</div></div>
       </div>
 
       <div id="cc-callbacks-alert" style="display:none" class="callback-alert">
         <span class="callback-alert-icon">📅</span>
         <div class="callback-alert-text">
-          <strong id="cc-callbacks-count">0 callbacks due today</strong>
+          <strong id="cc-callbacks-count">0 follow-ups due</strong>
           <span id="cc-callbacks-list">—</span>
         </div>
       </div>
 
+      <!-- Drop zone -->
+      <div class="cc-dropzone" id="cc-dropzone" onclick="document.getElementById('cc-file-input').click()">
+        <div class="cc-drop-icon">📂</div>
+        <div class="cc-drop-title">Drop a CSV or spreadsheet here to import</div>
+        <div class="cc-drop-sub">Supports .csv and .xlsx — columns: Company, Phone, Email, Owner</div>
+        <span class="btn btn-ghost btn-sm" style="pointer-events:none">Browse file</span>
+        <input type="file" id="cc-file-input" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleCcFileSelect(event)">
+      </div>
+
+      <div class="cc-import-banner" id="cc-import-banner"></div>
+
       <div class="sec-title-row">
-        <h2 class="sec-title">Call Log</h2>
-        <button class="btn btn-primary btn-sm" onclick="openLogCallModal()">+ Log a Call</button>
+        <div style="display:flex;align-items:center;gap:10px">
+          <h2 class="sec-title" style="margin:0">Call List</h2>
+          <span class="badge badge-purple" id="cc-count-badge">0</span>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <div class="search-wrap" style="width:190px">
+            <span class="search-icon">🔍</span>
+            <input class="search-input" type="search" placeholder="Search…" id="cc-search" oninput="filterCalls()">
+          </div>
+          <div class="filter-pills">
+            <button class="filter-pill active" onclick="setCcFilter('all',this)">All</button>
+            <button class="filter-pill" onclick="setCcFilter('booked',this)">Booked</button>
+            <button class="filter-pill" onclick="setCcFilter('follow_up',this)">Follow Up</button>
+            <button class="filter-pill" onclick="setCcFilter('voicemail',this)">Voicemail</button>
+            <button class="filter-pill" onclick="setCcFilter('hung_up',this)">Hung Up</button>
+            <button class="filter-pill" onclick="setCcFilter('',this)">Not Called</button>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="addNewCcRow()">+ Add Row</button>
+        </div>
       </div>
 
-      <div class="toolbar">
-        <div class="search-wrap">
-          <span class="search-icon">🔍</span>
-          <input class="search-input" type="search" placeholder="Search company…" id="cc-search" oninput="filterCalls()">
-        </div>
-        <div class="filter-pills">
-          <button class="filter-pill active" onclick="setCcFilter('all',this)">All</button>
-          <button class="filter-pill" onclick="setCcFilter('interested',this)">Interested</button>
-          <button class="filter-pill" onclick="setCcFilter('callback',this)">Callback</button>
-          <button class="filter-pill" onclick="setCcFilter('not_interested',this)">Not Interested</button>
-          <button class="filter-pill" onclick="setCcFilter('no_answer',this)">No Answer</button>
-        </div>
-        <input type="date" id="cc-date-filter" onchange="filterCalls()" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--inter);font-size:12px;padding:8px 12px;color-scheme:dark;outline:none;transition:border-color var(--tr)" onfocus="this.style.borderColor='var(--purple-hi)'" onblur="this.style.borderColor='var(--border)'">
-      </div>
-
-      <div class="table-wrap">
-        <table class="data-table">
+      <div class="cc-sheet-wrap">
+        <table class="cc-sheet">
           <thead>
             <tr>
+              <th class="cc-th-num">#</th>
               <th>Company</th>
-              <th>Contact</th>
-              <th>Date</th>
+              <th>Phone</th>
+              <th>Email</th>
+              <th>Owner Name</th>
               <th>Outcome</th>
-              <th>Next Action</th>
               <th>Notes</th>
               <th></th>
             </tr>
           </thead>
-          <tbody id="cc-tbody">
-            <tr class="no-hover"><td colspan="7"><div class="empty"><div class="empty-icon">⌛</div></div></td></tr>
+          <tbody id="cc-sheet-body">
+            <tr class="no-hover"><td colspan="8"><div class="empty"><div class="empty-icon">⌛</div></div></td></tr>
           </tbody>
         </table>
       </div>
@@ -364,48 +378,6 @@
     <span class="mobile-nav-icon">◉</span><span>Leads</span>
   </button>
 </nav>
-
-<!-- ── Log Call Modal ───────────────────────────────────────────────────── -->
-<div class="modal-overlay" id="log-call-modal">
-  <div class="modal">
-    <div class="modal-header">
-      <h3>Log a Cold Call</h3>
-      <button class="modal-close" onclick="closeModal('log-call-modal')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-grid">
-        <div class="field"><label>Company Name *</label><input type="text" id="cc-company" placeholder="Acme Plumbing Ltd"></div>
-        <div class="field"><label>Contact Name</label><input type="text" id="cc-contact" placeholder="John Smith"></div>
-      </div>
-      <div class="form-grid">
-        <div class="field"><label>Phone Number</label><input type="tel" id="cc-phone" placeholder="07700 000000"></div>
-        <div class="field"><label>Date & Time *</label><input type="datetime-local" id="cc-datetime" style="color-scheme:dark"></div>
-      </div>
-      <div class="field">
-        <label>Outcome *</label>
-        <select id="cc-outcome">
-          <option value="">Select outcome…</option>
-          <option value="interested">Interested</option>
-          <option value="callback">Callback Requested</option>
-          <option value="not_interested">Not Interested</option>
-          <option value="no_answer">No Answer</option>
-        </select>
-      </div>
-      <div class="form-grid">
-        <div class="field"><label>Next Action</label><input type="text" id="cc-next-action" placeholder="Send follow-up email"></div>
-        <div class="field"><label>Next Action Date</label><input type="date" id="cc-next-date" style="color-scheme:dark"></div>
-      </div>
-      <div class="field"><label>Notes</label><textarea id="cc-notes" placeholder="How did the call go? What did they say?"></textarea></div>
-      <div class="alert" id="cc-modal-alert"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('log-call-modal')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveCall()" id="save-call-btn">
-        <span class="spinner"></span><span class="btn-txt">Save Call</span>
-      </button>
-    </div>
-  </div>
-</div>
 
 <!-- ── New Lead Modal ───────────────────────────────────────────────────── -->
 <div class="modal-overlay" id="new-lead-modal">

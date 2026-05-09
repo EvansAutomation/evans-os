@@ -1,211 +1,344 @@
-// ── Cold Calls module ─────────────────────────────────────────────────────────
-let coldCallsData = [];
-let ccFilter = 'all';
+// ── Cold Calls — spreadsheet with file import ─────────────────────────────────
+let ccAllData  = [];
+let ccFilter   = 'all';
+let ccQuery    = '';
 
+// ── Load ──────────────────────────────────────────────────────────────────────
 async function loadColdCalls() {
   try {
     const { data, error } = await window.sb
       .from('cold_calls')
       .select('*')
-      .order('called_at', { ascending: false });
+      .order('created_at', { ascending: false });
 
     if (error) {
-      if (error.message?.includes('does not exist') || error.code === '42P01') {
-        showColdCallsSetup();
+      if (error.code === '42P01') {
+        document.getElementById('cc-sheet-body').innerHTML =
+          '<tr class="no-hover"><td colspan="8"><div class="empty"><div class="empty-icon">☎</div>' +
+          '<p class="empty-text">Run SUPABASE_SETUP.sql to create the cold_calls table</p></div></td></tr>';
         return;
       }
       throw error;
     }
 
-    coldCallsData = data || [];
-    renderColdCallStats();
-    renderColdCallTable(coldCallsData);
-    renderCallbacksAlert();
+    ccAllData = data || [];
+    renderCcSheet();
+    updateCcStats();
+    updateCcBadge();
+    checkFollowUps();
+    initCcDropzone();
   } catch (e) {
-    console.error('Cold calls load error:', e);
+    console.error('Cold calls error:', e);
   }
 }
 
-function showColdCallsSetup() {
-  document.getElementById('cc-tbody').innerHTML = `
-    <tr class="no-hover"><td colspan="7">
-      <div class="empty">
-        <div class="empty-icon">☎</div>
-        <p class="empty-text">Cold calls table not yet created in Supabase.<br>
-        <a href="#" onclick="showCreateTableSQL()" style="color:var(--purple-lt)">View setup SQL →</a></p>
-      </div>
-    </td></tr>`;
+// ── Render sheet ──────────────────────────────────────────────────────────────
+function renderCcSheet() {
+  const tbody = document.getElementById('cc-sheet-body');
+  const filtered = getFilteredCc();
+
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr class="no-hover"><td colspan="8">' +
+      '<div class="empty"><div class="empty-icon">☎</div>' +
+      '<p class="empty-text">No entries yet — drop a CSV/spreadsheet above or click + Add Row</p>' +
+      '</div></td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map((r, i) => makeCcRow(r, i)).join('');
 }
 
-function renderColdCallStats() {
-  const now = new Date();
-  const weekStart  = new Date(now); weekStart.setDate(weekStart.getDate() - 6); weekStart.setHours(0,0,0,0);
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-
-  const weekCalls  = coldCallsData.filter(c => new Date(c.called_at) >= weekStart);
-  const monthCalls = coldCallsData.filter(c => new Date(c.called_at) >= monthStart);
-
-  const cbRate = monthCalls.length
-    ? Math.round(monthCalls.filter(c => c.outcome === 'callback').length / monthCalls.length * 100)
-    : 0;
-  const intRate = monthCalls.length
-    ? Math.round(monthCalls.filter(c => c.outcome === 'interested').length / monthCalls.length * 100)
-    : 0;
-
-  document.getElementById('cc-stat-week').textContent    = weekCalls.length;
-  document.getElementById('cc-stat-month').textContent   = monthCalls.length;
-  document.getElementById('cc-stat-cb-rate').textContent = cbRate + '%';
-  document.getElementById('cc-stat-int-rate').textContent= intRate + '%';
+function getFilteredCc() {
+  return ccAllData.filter(r => {
+    const matchFilter =
+      ccFilter === 'all' ? true :
+      ccFilter === ''    ? !r.outcome :
+      r.outcome === ccFilter;
+    const matchQ = !ccQuery ||
+      (r.company_name  || '').toLowerCase().includes(ccQuery) ||
+      (r.contact_name  || '').toLowerCase().includes(ccQuery) ||
+      (r.phone         || '').includes(ccQuery) ||
+      (r.email         || '').toLowerCase().includes(ccQuery);
+    return matchFilter && matchQ;
+  });
 }
 
-function renderCallbacksAlert() {
-  const today = new Date().toISOString().slice(0,10);
-  const due = coldCallsData.filter(c =>
-    c.outcome === 'callback' && c.next_action_date && c.next_action_date <= today
+function makeCcRow(r, idx) {
+  const opts = [
+    ['', '— Not called'],
+    ['booked',    '✓  Booked'],
+    ['follow_up', '↻  Follow Up'],
+    ['voicemail', '📩  Voicemail'],
+    ['hung_up',   '✕  Hung Up'],
+  ].map(([v, l]) => `<option value="${v}"${r.outcome===v?' selected':''}>${l}</option>`).join('');
+
+  return `<tr class="cc-row" data-id="${r.id}" data-outcome="${r.outcome||''}">
+    <td class="cc-td-num">${idx + 1}</td>
+    <td><input class="cc-cell" type="text"  value="${esc(r.company_name||'')}"  placeholder="Company name…"  onblur="saveCcCell('${r.id}','company_name',this.value)"></td>
+    <td><input class="cc-cell" type="tel"   value="${esc(r.phone||'')}"         placeholder="Phone…"         onblur="saveCcCell('${r.id}','phone',this.value)"></td>
+    <td><input class="cc-cell" type="email" value="${esc(r.email||'')}"         placeholder="Email…"         onblur="saveCcCell('${r.id}','email',this.value)"></td>
+    <td><input class="cc-cell" type="text"  value="${esc(r.contact_name||'')}"  placeholder="Owner name…"    onblur="saveCcCell('${r.id}','contact_name',this.value)"></td>
+    <td class="cc-outcome-cell">
+      <select class="cc-outcome-select" onchange="saveCcOutcome('${r.id}',this.value,this.closest('tr'))">${opts}</select>
+    </td>
+    <td><input class="cc-cell" type="text"  value="${esc(r.notes||'')}"         placeholder="Notes…"         onblur="saveCcCell('${r.id}','notes',this.value)"></td>
+    <td><button class="cc-delete-btn" onclick="deleteCcRow('${r.id}',this.closest('tr'))" title="Delete row">✕</button></td>
+  </tr>`;
+}
+
+// ── Add blank row ─────────────────────────────────────────────────────────────
+async function addNewCcRow() {
+  try {
+    const { data, error } = await window.sb
+      .from('cold_calls').insert({ company_name: '' }).select().single();
+    if (error) throw error;
+
+    ccAllData.unshift(data);
+    const tbody = document.getElementById('cc-sheet-body');
+    const emptyRow = tbody.querySelector('.no-hover');
+    if (emptyRow) emptyRow.remove();
+
+    const tmp = document.createElement('tbody');
+    tmp.innerHTML = makeCcRow(data, 0);
+    const newRow = tmp.firstElementChild;
+    tbody.insertBefore(newRow, tbody.firstChild);
+    newRow.querySelector('.cc-cell')?.focus();
+    updateCcBadge();
+    updateCcStats();
+  } catch (e) {
+    showToast('Failed to add row: ' + e.message, 'error');
+  }
+}
+
+// ── Inline save ───────────────────────────────────────────────────────────────
+async function saveCcCell(id, field, value) {
+  try {
+    const { error } = await window.sb
+      .from('cold_calls').update({ [field]: value || null }).eq('id', id);
+    if (error) throw error;
+    const rec = ccAllData.find(r => r.id === id);
+    if (rec) rec[field] = value || null;
+  } catch (e) {
+    showToast('Save failed', 'error');
+  }
+}
+
+async function saveCcOutcome(id, value, rowEl) {
+  rowEl.dataset.outcome = value;
+  try {
+    const { error } = await window.sb
+      .from('cold_calls').update({ outcome: value || null }).eq('id', id);
+    if (error) throw error;
+    const rec = ccAllData.find(r => r.id === id);
+    if (rec) rec.outcome = value || null;
+    updateCcStats();
+
+    if (value === 'booked') showToast('🎉 Booked!', 'success');
+    else if (value === 'follow_up') showToast('Follow-up logged', 'info');
+  } catch (e) {
+    showToast('Save failed', 'error');
+  }
+}
+
+// ── Delete row ────────────────────────────────────────────────────────────────
+async function deleteCcRow(id, rowEl) {
+  try {
+    const { error } = await window.sb.from('cold_calls').delete().eq('id', id);
+    if (error) throw error;
+    ccAllData = ccAllData.filter(r => r.id !== id);
+    rowEl.style.cssText = 'opacity:0;transform:translateX(-10px);transition:all 220ms ease';
+    setTimeout(() => { rowEl.remove(); updateCcBadge(); updateCcStats(); }, 220);
+  } catch (e) {
+    showToast('Delete failed', 'error');
+  }
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+function updateCcStats() {
+  const booked   = ccAllData.filter(r => r.outcome === 'booked').length;
+  const followUp = ccAllData.filter(r => r.outcome === 'follow_up').length;
+  const called   = ccAllData.filter(r => r.outcome).length;
+  const conv     = called ? Math.round(booked / called * 100) : 0;
+  const weekAgo  = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+  const thisWeek = ccAllData.filter(r => r.created_at && new Date(r.created_at) >= weekAgo).length;
+
+  countUp(document.getElementById('cc-stat-week'),   thisWeek);
+  countUp(document.getElementById('cc-stat-booked'), booked);
+  countUp(document.getElementById('cc-stat-follow'),  followUp);
+  document.getElementById('cc-stat-conv').textContent = conv + '%';
+}
+
+function updateCcBadge() {
+  const el = document.getElementById('cc-count-badge');
+  if (el) el.textContent = ccAllData.length;
+}
+
+function checkFollowUps() {
+  const today = new Date().toISOString().slice(0, 10);
+  const due = ccAllData.filter(r =>
+    r.outcome === 'follow_up' && r.next_action_date && r.next_action_date <= today
   );
-
   const alertEl = document.getElementById('cc-callbacks-alert');
+  if (!alertEl) return;
   if (due.length) {
     alertEl.style.display = 'flex';
     document.getElementById('cc-callbacks-count').textContent =
-      `${due.length} callback${due.length !== 1 ? 's' : ''} due today`;
+      `${due.length} follow-up${due.length > 1 ? 's' : ''} due`;
     document.getElementById('cc-callbacks-list').textContent =
-      due.map(c => c.company_name).join(', ');
+      due.slice(0, 4).map(r => r.company_name).join(', ');
   } else {
     alertEl.style.display = 'none';
   }
 }
 
-function renderColdCallTable(data) {
-  const tbody = document.getElementById('cc-tbody');
-  if (!data.length) {
-    tbody.innerHTML = `<tr class="no-hover"><td colspan="7"><div class="empty"><div class="empty-icon">☎</div><p class="empty-text">No calls logged yet — click Log a Call</p></div></td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = data.map(c => `
-    <tr onclick="openEditCallModal('${c.id}')">
-      <td class="bold">${esc(c.company_name||'—')}</td>
-      <td>${esc(c.contact_name||'—')}</td>
-      <td style="font-size:12px;white-space:nowrap">${fmtDateTime(c.called_at)}</td>
-      <td><span class="outcome-pill outcome-${c.outcome}">${outcomeLabel(c.outcome)}</span></td>
-      <td style="font-size:12px">${esc(c.next_action||'—')}${c.next_action_date ? `<br><span style="font-size:11px;color:var(--muted)">${c.next_action_date}</span>` : ''}</td>
-      <td style="font-size:12px;color:var(--text2);max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.notes||'—')}</td>
-      <td>
-        <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteCall('${c.id}')">Delete</button>
-      </td>
-    </tr>`).join('');
-}
-
-function setCcFilter(f, el) {
-  ccFilter = f;
-  document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
-  el.classList.add('active');
-  filterCalls();
+// ── Filter / search ───────────────────────────────────────────────────────────
+function setCcFilter(value, btn) {
+  ccFilter = value;
+  document.querySelectorAll('#sec-cold-calls .filter-pill').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  renderCcSheet();
 }
 
 function filterCalls() {
-  const q    = (document.getElementById('cc-search').value || '').toLowerCase();
-  const date = document.getElementById('cc-date-filter').value;
-
-  let data = coldCallsData;
-  if (ccFilter !== 'all') data = data.filter(c => c.outcome === ccFilter);
-  if (q) data = data.filter(c => (c.company_name||'').toLowerCase().includes(q) || (c.contact_name||'').toLowerCase().includes(q));
-  if (date) data = data.filter(c => c.called_at?.startsWith(date));
-
-  renderColdCallTable(data);
+  ccQuery = (document.getElementById('cc-search')?.value || '').toLowerCase();
+  renderCcSheet();
 }
 
-// ── Log / Edit call modal ─────────────────────────────────────────────────────
-let editCallId = null;
+// ── Dropzone ──────────────────────────────────────────────────────────────────
+function initCcDropzone() {
+  const zone = document.getElementById('cc-dropzone');
+  if (!zone || zone._init) return;
+  zone._init = true;
 
-function openLogCallModal() {
-  editCallId = null;
-  clearAlert('cc-modal-alert');
-  document.getElementById('cc-company').value    = '';
-  document.getElementById('cc-contact').value    = '';
-  document.getElementById('cc-phone').value      = '';
-  document.getElementById('cc-outcome').value    = '';
-  document.getElementById('cc-next-action').value= '';
-  document.getElementById('cc-next-date').value  = '';
-  document.getElementById('cc-notes').value      = '';
-  // default datetime to now
-  const now = new Date();
-  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0,16);
-  document.getElementById('cc-datetime').value = local;
-  openModal('log-call-modal');
+  zone.addEventListener('dragover',  e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) processImportFile(file);
+  });
 }
 
-function openEditCallModal(id) {
-  const c = coldCallsData.find(x => x.id === id);
-  if (!c) return;
-  editCallId = id;
-  clearAlert('cc-modal-alert');
-  document.getElementById('cc-company').value    = c.company_name || '';
-  document.getElementById('cc-contact').value    = c.contact_name || '';
-  document.getElementById('cc-phone').value      = c.phone || '';
-  document.getElementById('cc-outcome').value    = c.outcome || '';
-  document.getElementById('cc-next-action').value= c.next_action || '';
-  document.getElementById('cc-next-date').value  = c.next_action_date || '';
-  document.getElementById('cc-notes').value      = c.notes || '';
-  if (c.called_at) {
-    const d = new Date(c.called_at);
-    document.getElementById('cc-datetime').value =
-      new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0,16);
-  }
-  openModal('log-call-modal');
+function handleCcFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) processImportFile(file);
+  e.target.value = '';
 }
 
-async function saveCall() {
-  const company  = document.getElementById('cc-company').value.trim();
-  const outcome  = document.getElementById('cc-outcome').value;
-  const datetime = document.getElementById('cc-datetime').value;
-
-  if (!company) { showAlert('cc-modal-alert', 'Company name is required.'); return; }
-  if (!outcome) { showAlert('cc-modal-alert', 'Please select an outcome.'); return; }
-
-  setLoading('save-call-btn', true);
-  clearAlert('cc-modal-alert');
-
-  const payload = {
-    company_name:     company,
-    contact_name:     document.getElementById('cc-contact').value.trim() || null,
-    phone:            document.getElementById('cc-phone').value.trim() || null,
-    called_at:        datetime ? new Date(datetime).toISOString() : new Date().toISOString(),
-    outcome,
-    next_action:      document.getElementById('cc-next-action').value.trim() || null,
-    next_action_date: document.getElementById('cc-next-date').value || null,
-    notes:            document.getElementById('cc-notes').value.trim() || null,
-  };
+async function processImportFile(file) {
+  const banner = document.getElementById('cc-import-banner');
+  if (banner) { banner.textContent = `Importing ${file.name}…`; banner.classList.add('show'); }
 
   try {
-    let error;
-    if (editCallId) {
-      ({ error } = await window.sb.from('cold_calls').update(payload).eq('id', editCallId));
+    let rows = [];
+    const name = file.name.toLowerCase();
+    if (name.endsWith('.csv') || file.type === 'text/csv') {
+      rows = await parseCsvFile(file);
+    } else if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
+      rows = await parseXlsxFile(file);
     } else {
-      ({ error } = await window.sb.from('cold_calls').insert(payload));
+      showToast('Please use a .csv or .xlsx file', 'error');
+      return;
     }
-    if (error) throw error;
 
-    closeModal('log-call-modal');
-    showToast('Call logged ✓', 'success');
+    if (!rows.length) { showToast('No usable rows found in file', 'error'); return; }
+
+    if (banner) banner.textContent = `Saving ${rows.length} rows…`;
+    await importCcRows(rows);
+    showToast(`Imported ${rows.length} rows ✓`, 'success');
     await loadColdCalls();
-    loadHomeStats();
   } catch (e) {
-    showAlert('cc-modal-alert', 'Save failed: ' + e.message);
+    showToast('Import failed: ' + e.message, 'error');
+  } finally {
+    if (banner) banner.classList.remove('show');
   }
-
-  setLoading('save-call-btn', false);
 }
 
-async function deleteCall(id) {
-  if (!confirm('Delete this call record?')) return;
-  const { error } = await window.sb.from('cold_calls').delete().eq('id', id);
-  if (!error) {
-    coldCallsData = coldCallsData.filter(c => c.id !== id);
-    renderColdCallStats();
-    renderColdCallTable(coldCallsData);
-    renderCallbacksAlert();
-    loadHomeStats();
+// ── CSV parser ────────────────────────────────────────────────────────────────
+function parseCsvFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const lines = e.target.result.split(/\r?\n/).filter(l => l.trim());
+        if (lines.length < 2) { resolve([]); return; }
+        const headers = parseCsvLine(lines[0]).map(h => h.toLowerCase());
+        const rows = lines.slice(1)
+          .map(l => mapToRecord(headers, parseCsvLine(l)))
+          .filter(r => r.company_name);
+        resolve(rows);
+      } catch (err) { reject(err); }
+    };
+    reader.onerror = reject;
+    reader.readAsText(file);
+  });
+}
+
+function parseCsvLine(line) {
+  const vals = []; let cur = ''; let inQ = false;
+  for (const c of line) {
+    if (c === '"') { inQ = !inQ; continue; }
+    if (c === ',' && !inQ) { vals.push(cur.trim()); cur = ''; }
+    else cur += c;
+  }
+  vals.push(cur.trim());
+  return vals;
+}
+
+// ── Excel parser ──────────────────────────────────────────────────────────────
+async function parseXlsxFile(file) {
+  if (!window.XLSX) {
+    await new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb   = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+        const ws   = wb.Sheets[wb.SheetNames[0]];
+        const raw  = XLSX.utils.sheet_to_json(ws, { header: 1 });
+        if (raw.length < 2) { resolve([]); return; }
+        const headers = raw[0].map(h => String(h || '').trim().toLowerCase());
+        const rows = raw.slice(1)
+          .map(row => mapToRecord(headers, row.map(v => String(v == null ? '' : v).trim())))
+          .filter(r => r.company_name);
+        resolve(rows);
+      } catch (err) { reject(err); }
+    };
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+// ── Column mapper (flexible header matching) ──────────────────────────────────
+function mapToRecord(headers, values) {
+  const get = (...keys) => {
+    for (const k of keys) {
+      const idx = headers.findIndex(h => h.includes(k));
+      if (idx !== -1 && values[idx]) return String(values[idx]).trim();
+    }
+    return null;
+  };
+  // Positional fallback if no headers matched
+  return {
+    company_name: get('company', 'business', 'organisation', 'organization', 'name') || values[0] || null,
+    phone:        get('phone', 'tel', 'mobile', 'number', 'contact number')          || values[1] || null,
+    email:        get('email', 'e-mail', 'mail')                                     || values[2] || null,
+    contact_name: get('owner', 'contact', 'person', 'full name', 'first name')       || values[3] || null,
+    outcome:      null,
+  };
+}
+
+// ── Bulk insert ───────────────────────────────────────────────────────────────
+async function importCcRows(rows) {
+  for (let i = 0; i < rows.length; i += 50) {
+    const { error } = await window.sb.from('cold_calls').insert(rows.slice(i, i + 50));
+    if (error) throw error;
   }
 }

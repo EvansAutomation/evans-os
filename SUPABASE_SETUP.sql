@@ -2,18 +2,25 @@
 -- Creates the 3 new tables required by the Personal OS
 
 -- ── Cold Calls ────────────────────────────────────────────────────────────────
+-- If the table already exists, run the ALTER statements below instead.
 CREATE TABLE IF NOT EXISTS cold_calls (
   id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_name     text NOT NULL,
+  company_name     text,
   contact_name     text,
   phone            text,
-  called_at        timestamptz NOT NULL DEFAULT now(),
-  outcome          text CHECK (outcome IN ('interested','callback','not_interested','no_answer')),
+  email            text,
+  outcome          text CHECK (outcome IN ('booked','follow_up','voicemail','hung_up')),
   notes            text,
-  next_action      text,
   next_action_date date,
   created_at       timestamptz NOT NULL DEFAULT now()
 );
+
+-- If table already exists, run these to migrate:
+-- ALTER TABLE cold_calls ADD COLUMN IF NOT EXISTS email text;
+-- ALTER TABLE cold_calls DROP CONSTRAINT IF EXISTS cold_calls_outcome_check;
+-- ALTER TABLE cold_calls ADD CONSTRAINT cold_calls_outcome_check
+--   CHECK (outcome IN ('booked','follow_up','voicemail','hung_up'));
+-- ALTER TABLE cold_calls ALTER COLUMN company_name DROP NOT NULL;
 
 -- RLS: only the admin can read/write cold_calls
 ALTER TABLE cold_calls ENABLE ROW LEVEL SECURITY;
