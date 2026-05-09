@@ -194,8 +194,8 @@
 
       <div class="stats-row">
         <div class="stat-card"><div class="stat-value" id="cl-stat-total">—</div><div class="stat-label">Total Clients</div></div>
-        <div class="stat-card"><div class="stat-value" id="cl-stat-calls">—</div><div class="stat-label">Calls This Month</div></div>
-        <div class="stat-card"><div class="stat-value" id="cl-stat-revenue">—</div><div class="stat-label">Revenue This Month</div></div>
+        <div class="stat-card"><div class="stat-value" id="cl-stat-active">—</div><div class="stat-label">Active Clients</div></div>
+        <div class="stat-card"><div class="stat-value" id="cl-stat-revenue">—</div><div class="stat-label">Monthly MRR</div></div>
       </div>
 
       <div class="toolbar">
@@ -203,7 +203,7 @@
           <span class="search-icon">🔍</span>
           <input class="search-input" type="search" placeholder="Search clients…" id="cl-search" oninput="filterClients()">
         </div>
-        <a href="https://client.portal.evans-automation.com/admin.html" class="btn btn-ghost btn-sm" target="_blank">Open Admin Panel ↗</a>
+        <button class="btn btn-primary btn-sm" onclick="openNewClientModal()">+ Add Client</button>
       </div>
 
       <div class="client-grid" id="client-grid">
@@ -501,6 +501,7 @@
       <div class="alert" id="post-modal-alert" style="margin-top:12px"></div>
     </div>
     <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" onclick="deletePost()" id="delete-post-btn" style="display:none">Delete</button>
       <button class="btn btn-ghost" onclick="closeModal('add-post-modal')">Cancel</button>
       <button class="btn btn-primary" onclick="savePost()" id="save-post-btn">
         <span class="spinner"></span><span class="btn-txt">Save Post</span>
@@ -559,9 +560,50 @@
   </div>
 </div>
 
+<!-- ── Add / Edit Client Modal ───────────────────────────────────────────── -->
+<div class="modal-overlay" id="client-modal">
+  <div class="modal" style="max-width:580px">
+    <div class="modal-header">
+      <h3 id="cl-modal-title">Add Client</h3>
+      <button class="modal-close" onclick="closeModal('client-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="cl-edit-id">
+      <div class="form-grid">
+        <div class="field"><label>Business Name *</label><input type="text" id="cl-business-name" placeholder="Acme Plumbing Ltd"></div>
+        <div class="field"><label>Owner Name</label><input type="text" id="cl-owner-name" placeholder="John Smith"></div>
+      </div>
+      <div class="form-grid">
+        <div class="field"><label>Business Email</label><input type="email" id="cl-business-email" placeholder="info@acme.com"></div>
+        <div class="field"><label>Owner Email</label><input type="email" id="cl-owner-email" placeholder="john@acme.com"></div>
+      </div>
+      <div class="form-grid">
+        <div class="field"><label>Phone</label><input type="tel" id="cl-phone" placeholder="07700 000000"></div>
+        <div class="field"><label>Industry</label><input type="text" id="cl-industry" placeholder="Plumbing, HVAC, Electrician…"></div>
+      </div>
+      <div class="form-grid">
+        <div class="field"><label>Monthly Value (£)</label><input type="number" id="cl-monthly-value" placeholder="0" min="0"></div>
+        <div class="field"><label>Status</label>
+          <select id="cl-status">
+            <option value="active">Active</option>
+            <option value="paused">Paused</option>
+            <option value="churned">Churned</option>
+          </select>
+        </div>
+      </div>
+      <div class="field"><label>Vapi Assistant ID</label><input type="text" id="cl-vapi-id" placeholder="vapi-…" style="font-family:monospace;font-size:12px"></div>
+      <div class="field"><label>Notes</label><textarea id="cl-notes" placeholder="Client notes, preferences, context…"></textarea></div>
+      <div class="alert" id="cl-modal-alert" style="margin-top:12px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('client-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveClient()">Save Client</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Scripts ──────────────────────────────────────────────────────────── -->
 <div id="toast-container" class="toast-container"></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script src="js/canvas-bg.js"></script>
 <script src="js/os-core.js"></script>

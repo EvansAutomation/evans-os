@@ -1,49 +1,13 @@
-// ── Instagram module ──────────────────────────────────────────────────────────
+// ── Instagram module — localStorage ───────────────────────────────────────────
 let igPosts = [];
 let igEngChart = null;
 let igBreakChart = null;
 
-async function loadInstagram() {
-  try {
-    const { data, error } = await window.sb
-      .from('instagram_posts')
-      .select('*')
-      .order('posted_at', { ascending: false });
-
-    if (error && (error.code === '42P01' || error.message?.includes('does not exist'))) {
-      renderIgEmpty();
-      return;
-    }
-
-    igPosts = data || [];
-    renderIgStats();
-    renderIgCharts();
-    renderPostGrid(igPosts);
-    checkIgToken();
-  } catch (e) {
-    console.error('Instagram load error:', e);
-  }
-}
-
-async function checkIgToken() {
-  try {
-    const { data } = await window.sb
-      .from('settings')
-      .select('value')
-      .eq('key', 'ig_access_token')
-      .single();
-    if (data?.value) {
-      document.getElementById('ig-sync-btn').style.display = 'inline-flex';
-    } else {
-      document.getElementById('ig-setup-banner').style.display = 'block';
-    }
-  } catch (_) {
-    document.getElementById('ig-setup-banner').style.display = 'block';
-  }
-}
-
-function renderIgEmpty() {
-  document.getElementById('ig-setup-banner').style.display = 'block';
+function loadInstagram() {
+  igPosts = lsGet(LS.igPosts);
+  renderIgStats();
+  renderIgCharts();
+  renderPostGrid(igPosts);
 }
 
 function renderIgStats() {
@@ -58,10 +22,10 @@ function renderIgStats() {
     return (total / count * 100).toFixed(1) + '%';
   })() : '0%';
 
-  document.getElementById('ig-stat-posts').textContent    = count;
-  document.getElementById('ig-stat-avg-likes').textContent= avgLikes;
-  document.getElementById('ig-stat-avg-comments').textContent = avgComments;
-  document.getElementById('ig-stat-eng').textContent      = avgEng;
+  document.getElementById('ig-stat-posts').textContent         = count;
+  document.getElementById('ig-stat-avg-likes').textContent     = avgLikes;
+  document.getElementById('ig-stat-avg-comments').textContent  = avgComments;
+  document.getElementById('ig-stat-eng').textContent           = avgEng;
 }
 
 function renderIgCharts() {
@@ -80,7 +44,6 @@ function renderIgCharts() {
     }
   };
 
-  // Engagement chart
   const engCtx = document.getElementById('ig-chart-engagement')?.getContext('2d');
   if (engCtx) {
     if (igEngChart) igEngChart.destroy();
@@ -102,7 +65,6 @@ function renderIgCharts() {
     });
   }
 
-  // Likes vs comments
   const brkCtx = document.getElementById('ig-chart-breakdown')?.getContext('2d');
   if (brkCtx) {
     if (igBreakChart) igBreakChart.destroy();
@@ -137,7 +99,7 @@ function renderPostGrid(data) {
     const typeIcon = { video:'🎥', carousel:'🖼', image:'📷' }[p.media_type] || '📷';
 
     return `
-      <div class="ig-post-card" onclick="openPostDetail('${p.id}')">
+      <div class="ig-post-card" onclick="openAddPostModal('${p.id}')">
         <div class="ig-post-img">${typeIcon}</div>
         <div class="ig-post-body">
           <div class="ig-post-caption">${esc(p.caption||'No caption')}</div>
@@ -168,15 +130,15 @@ function openAddPostModal(postId) {
   if (editId) {
     const p = igPosts.find(x => x.id === editId);
     if (p) {
-      document.getElementById('post-url').value        = p.post_url || '';
-      document.getElementById('post-caption').value    = p.caption || '';
-      document.getElementById('post-date').value       = p.posted_at?.slice(0,10) || '';
-      document.getElementById('post-type').value       = p.media_type || 'image';
-      document.getElementById('post-likes').value      = p.likes || '';
-      document.getElementById('post-comments').value   = p.comments || '';
-      document.getElementById('post-reach').value      = p.reach || '';
-      document.getElementById('post-impressions').value= p.impressions || '';
-      document.getElementById('post-saves').value      = p.saves || '';
+      document.getElementById('post-url').value         = p.post_url || '';
+      document.getElementById('post-caption').value     = p.caption || '';
+      document.getElementById('post-date').value        = p.posted_at?.slice(0,10) || '';
+      document.getElementById('post-type').value        = p.media_type || 'image';
+      document.getElementById('post-likes').value       = p.likes || '';
+      document.getElementById('post-comments').value    = p.comments || '';
+      document.getElementById('post-reach').value       = p.reach || '';
+      document.getElementById('post-impressions').value = p.impressions || '';
+      document.getElementById('post-saves').value       = p.saves || '';
     }
   } else {
     ['post-url','post-caption','post-date','post-likes','post-comments','post-reach','post-impressions','post-saves']
@@ -184,12 +146,15 @@ function openAddPostModal(postId) {
     document.getElementById('post-type').value = 'image';
   }
 
-  document.getElementById('post-analysis-box').style.display = 'none';
+  const box = document.getElementById('post-analysis-box');
+  if (box) box.style.display = 'none';
+  const delBtn = document.getElementById('delete-post-btn');
+  if (delBtn) delBtn.style.display = editId ? 'inline-flex' : 'none';
   clearAlert('post-modal-alert');
   openModal('add-post-modal');
 }
 
-async function savePost() {
+function savePost() {
   const date = document.getElementById('post-date').value;
   if (!date) { showAlert('post-modal-alert', 'Date is required.'); return; }
 
@@ -209,24 +174,35 @@ async function savePost() {
     saves:       parseInt(document.getElementById('post-saves').value) || 0,
   };
 
-  try {
-    let error;
-    if (editId) {
-      ({ error } = await window.sb.from('instagram_posts').update(payload).eq('id', editId));
-    } else {
-      ({ error } = await window.sb.from('instagram_posts').insert(payload));
-    }
-    if (error) throw error;
-
-    closeModal('add-post-modal');
-    showToast('Post saved ✓', 'success');
-    await loadInstagram();
-    loadHomeStats();
-  } catch (e) {
-    showAlert('post-modal-alert', 'Save failed: ' + e.message);
+  if (editId) {
+    const idx = igPosts.findIndex(p => p.id === editId);
+    if (idx !== -1) igPosts[idx] = { ...igPosts[idx], ...payload };
+  } else {
+    igPosts.unshift({ id: newId(), ...payload, created_at: new Date().toISOString() });
   }
 
+  lsSave(LS.igPosts, igPosts);
+  closeModal('add-post-modal');
+  showToast('Post saved ✓', 'success');
+  renderIgStats();
+  renderIgCharts();
+  renderPostGrid(igPosts);
+  loadHomeStats();
+
   setLoading('save-post-btn', false);
+}
+
+function deletePost() {
+  const editId = document.getElementById('post-edit-id').value;
+  if (!editId || !confirm('Delete this post?')) return;
+  igPosts = igPosts.filter(p => p.id !== editId);
+  lsSave(LS.igPosts, igPosts);
+  closeModal('add-post-modal');
+  showToast('Post deleted', 'info');
+  renderIgStats();
+  renderIgCharts();
+  renderPostGrid(igPosts);
+  loadHomeStats();
 }
 
 // ── AI analysis ───────────────────────────────────────────────────────────────
@@ -255,22 +231,16 @@ async function analysePost() {
     const box = document.getElementById('post-analysis-box');
     box.style.display = 'block';
     box.textContent = analysis;
+
+    // Save analysis to the post if editing
+    const editId = document.getElementById('post-edit-id').value;
+    if (editId) {
+      const idx = igPosts.findIndex(p => p.id === editId);
+      if (idx !== -1) { igPosts[idx].ai_analysis = analysis; lsSave(LS.igPosts, igPosts); }
+    }
   } catch (e) {
     showAlert('post-modal-alert', 'Analysis failed: ' + e.message);
   }
 
   setLoading('analyse-post-btn', false);
-}
-
-// ── Post detail (click card) ──────────────────────────────────────────────────
-function openPostDetail(id) {
-  openAddPostModal(id);
-}
-
-function openIgSetupModal() {
-  openModal('ig-setup-modal');
-}
-
-function openIgSyncModal() {
-  alert('Instagram sync coming soon — paste your access token into Supabase settings table first.');
 }
