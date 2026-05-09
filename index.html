@@ -39,6 +39,9 @@
       <button class="nav-btn" onclick="navigate('cold-calls')" id="nav-cold-calls">
         <span class="nav-icon">☎</span><span class="nav-label">Cold Calls</span>
       </button>
+      <button class="nav-btn" onclick="navigate('booked')" id="nav-booked">
+        <span class="nav-icon">📅</span><span class="nav-label">Booked</span>
+      </button>
       <button class="nav-btn" onclick="navigate('leads')" id="nav-leads">
         <span class="nav-icon">◉</span><span class="nav-label">Leads</span>
       </button>
@@ -312,6 +315,7 @@
               <th>Owner Name</th>
               <th>Outcome</th>
               <th>Notes</th>
+              <th>Outreach</th>
               <th></th>
             </tr>
           </thead>
@@ -354,6 +358,29 @@
       </div>
     </section>
 
+    <!-- BOOKED CALLS ────────────────────────────────────────────────── -->
+    <section class="section" id="sec-booked">
+      <div class="page-header">
+        <h1 class="page-title"><span>Booked</span> Calls</h1>
+        <p class="page-sub">Leads who booked a call — everything you need to know before you speak</p>
+      </div>
+
+      <div class="sec-title-row" style="margin-bottom:20px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <h2 class="sec-title" style="margin:0">Upcoming Calls</h2>
+          <span class="badge badge-green" id="booked-count-badge">0</span>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="navigate('cold-calls')">← Back to Calls</button>
+      </div>
+
+      <div class="booked-grid" id="booked-grid">
+        <div style="grid-column:1/-1" class="empty">
+          <div class="empty-icon">📅</div>
+          <p class="empty-text">No booked calls yet — mark a call as Booked in Cold Calls</p>
+        </div>
+      </div>
+    </section>
+
   </main><!-- /main -->
 </div><!-- /wrap -->
 
@@ -373,6 +400,9 @@
   </button>
   <button class="mobile-nav-btn" onclick="navigate('cold-calls')" id="mnav-cold-calls">
     <span class="mobile-nav-icon">☎</span><span>Calls</span>
+  </button>
+  <button class="mobile-nav-btn" onclick="navigate('booked')" id="mnav-booked">
+    <span class="mobile-nav-icon">📅</span><span>Booked</span>
   </button>
   <button class="mobile-nav-btn" onclick="navigate('leads')" id="mnav-leads">
     <span class="mobile-nav-icon">◉</span><span>Leads</span>
@@ -560,6 +590,74 @@
   </div>
 </div>
 
+<!-- ── Voicemail Outreach Modal ───────────────────────────────────────────── -->
+<div class="modal-overlay" id="voicemail-modal">
+  <div class="modal" style="max-width:660px">
+    <div class="modal-header">
+      <h3>📩 Voicemail — Generate Outreach</h3>
+      <button class="modal-close" onclick="closeModal('voicemail-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <div style="background:rgba(139,60,247,0.07);border:1px solid rgba(139,60,247,0.2);border-radius:10px;padding:14px 16px;margin-bottom:18px">
+        <div style="font-size:14px;font-weight:600;font-family:var(--syne)" id="vm-company-name">Company</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px" id="vm-contact">—</div>
+      </div>
+
+      <div class="field" style="margin-bottom:14px">
+        <label>Their website <span style="color:var(--muted);font-weight:400">(needed to personalise the outreach)</span></label>
+        <input type="url" id="vm-website" placeholder="https://theircompany.co.uk">
+      </div>
+
+      <div class="scrape-progress" id="vm-progress" style="display:none;margin-bottom:16px">
+        <div class="scrape-progress-title"><span class="dot dot-purple"></span> Researching &amp; generating…</div>
+        <div class="scrape-steps">
+          <div class="scrape-step" id="vm-step-1">◦ Scraping website…</div>
+          <div class="scrape-step" id="vm-step-2">◦ Finding socials…</div>
+          <div class="scrape-step" id="vm-step-3">◦ Crafting AI message…</div>
+          <div class="scrape-step" id="vm-step-4">◦ Sending email…</div>
+        </div>
+      </div>
+
+      <div id="vm-results" style="display:none">
+        <div id="vm-email-sent" style="display:none;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25);border-radius:8px;padding:10px 14px;font-size:12px;color:#4ade80;margin-bottom:14px">
+          ✓ Email sent automatically to their inbox
+        </div>
+
+        <div style="margin-bottom:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div style="font-family:var(--syne);font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text2)">✉ Email Message</div>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-ghost btn-sm" onclick="copyVmMessage('email')">⎘ Copy</button>
+            </div>
+          </div>
+          <div class="outreach-box" id="vm-email-message" style="font-size:12px;max-height:160px;overflow-y:auto"></div>
+        </div>
+
+        <div style="margin-bottom:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div style="font-family:var(--syne);font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text2)">📲 Social Media DM</div>
+            <div style="display:flex;gap:6px">
+              <a id="vm-ig-link" href="#" target="_blank" class="btn btn-ghost btn-sm" style="display:none">Instagram ↗</a>
+              <a id="vm-li-link" href="#" target="_blank" class="btn btn-ghost btn-sm" style="display:none">LinkedIn ↗</a>
+              <button class="btn btn-ghost btn-sm" onclick="copyVmMessage('social')">⎘ Copy</button>
+            </div>
+          </div>
+          <div class="outreach-box" id="vm-social-message" style="font-size:12px;max-height:140px;overflow-y:auto"></div>
+        </div>
+      </div>
+
+      <div class="alert" id="vm-alert"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('voicemail-modal')">Close</button>
+      <button class="btn btn-primary" onclick="runVoicemailOutreach()" id="vm-run-btn">
+        <span class="spinner"></span><span class="btn-txt">✦ Generate &amp; Send</span>
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Add / Edit Client Modal ───────────────────────────────────────────── -->
 <div class="modal-overlay" id="client-modal">
   <div class="modal" style="max-width:580px">
@@ -604,6 +702,7 @@
 
 <!-- ── Scripts ──────────────────────────────────────────────────────────── -->
 <div id="toast-container" class="toast-container"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script src="js/canvas-bg.js"></script>
 <script src="js/os-core.js"></script>

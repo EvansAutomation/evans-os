@@ -1,9 +1,14 @@
-// ── Config (n8n webhooks only — no Supabase) ──────────────────────────────────
-const N8N_BASE           = 'https://n8n.evansautomation.tech/webhook';
-const AI_CHAT_WEBHOOK    = N8N_BASE + '/evans-ai-chat';
+// ── Supabase (clients only) ────────────────────────────────────────────────────
+const SUPABASE_URL      = 'https://mmyshrsccnrutqjxthty.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1teXNocnNjY25ydXRxanh0aHR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2NjkzOTMsImV4cCI6MjA4OTI0NTM5M30.ZUx38SQe_N4dtMdHJkGnfI4JhMtg2ww_o3Yx-R_ihxc';
+
+// ── n8n webhooks ──────────────────────────────────────────────────────────────
+const N8N_BASE              = 'https://n8n.evansautomation.tech/webhook';
+const AI_CHAT_WEBHOOK       = N8N_BASE + '/evans-ai-chat';
 const LEAD_SCRAPE_WEBHOOK   = N8N_BASE + '/evans-lead-scrape';
 const LEAD_OUTREACH_WEBHOOK = N8N_BASE + '/evans-lead-outreach';
-const IG_ANALYSE_WEBHOOK = N8N_BASE + '/evans-ig-analyse';
+const IG_ANALYSE_WEBHOOK    = N8N_BASE + '/evans-ig-analyse';
+const CC_VOICEMAIL_WEBHOOK  = N8N_BASE + '/evans-cc-voicemail';
 
 // ── localStorage keys ─────────────────────────────────────────────────────────
 const LS = {
@@ -24,6 +29,15 @@ function lsSave(key, data) {
 function newId() {
   return (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
 }
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+// Supabase client — only used by clients.js
+window.sb = null;
+document.addEventListener('DOMContentLoaded', () => {
+  if (typeof supabase !== 'undefined') {
+    window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }
+});
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 function osInit() {
@@ -50,7 +64,9 @@ function navigate(id) {
   document.getElementById('nav-' + id)?.classList.add('active');
   document.getElementById('mnav-' + id)?.classList.add('active');
 
-  if (!sectionLoaded[id]) {
+  if (id === 'booked') {
+    renderBookedSection();  // always re-render so new bookings appear
+  } else if (!sectionLoaded[id]) {
     sectionLoaded[id] = true;
     if (id === 'clients')    loadClients();
     if (id === 'cold-calls') loadColdCalls();
