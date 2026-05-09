@@ -188,6 +188,7 @@ async function saveCall() {
     if (error) throw error;
 
     closeModal('log-call-modal');
+    showToast('Call logged ✓', 'success');
     await loadColdCalls();
     loadHomeStats();
   } catch (e) {

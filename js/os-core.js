@@ -61,10 +61,10 @@ async function loadHomeStats() {
       window.sb.from('instagram_posts').select('likes, comments, reach').limit(50)
     ]);
 
-    // Stats
-    document.getElementById('home-stat-clients').textContent = clients?.length ?? 0;
-    document.getElementById('home-stat-leads').textContent   = leads?.length ?? 0;
-    document.getElementById('home-stat-calls').textContent   = calls?.length ?? 0;
+    // Stats — animated count-up
+    countUp(document.getElementById('home-stat-clients'), clients?.length ?? 0);
+    countUp(document.getElementById('home-stat-leads'),   leads?.length ?? 0);
+    countUp(document.getElementById('home-stat-calls'),   calls?.length ?? 0);
 
     // Instagram avg engagement
     if (igPosts?.length) {
@@ -211,6 +211,35 @@ function showAlert(elId, msg, type = 'error') {
 function clearAlert(elId) {
   const el = document.getElementById(elId);
   if (el) el.className = 'alert';
+}
+
+// ── Count-up animation ────────────────────────────────────────────────────────
+function countUp(el, target, duration = 900, suffix = '') {
+  if (typeof target !== 'number' || isNaN(target)) { el.textContent = target + suffix; return; }
+  const start = performance.now();
+  const from = 0;
+  function step(now) {
+    const p = Math.min((now - start) / duration, 1);
+    const ease = 1 - Math.pow(1 - p, 3);
+    el.textContent = Math.round(from + (target - from) * ease) + suffix;
+    if (p < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+// ── Toast notifications ───────────────────────────────────────────────────────
+function showToast(msg, type = 'success') {
+  const icons = { success: '✓', error: '✕', info: '✦' };
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.innerHTML = `<span class="toast-icon">${icons[type]}</span><span>${msg}</span>`;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.add('hide');
+    toast.addEventListener('animationend', () => toast.remove(), { once: true });
+  }, 3200);
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────

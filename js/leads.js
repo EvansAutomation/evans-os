@@ -272,6 +272,7 @@ async function saveLead() {
     if (error) throw error;
 
     closeModal('new-lead-modal');
+    showToast('Lead saved ✓', 'success');
     await loadLeads();
     loadHomeStats();
   } catch (e) {

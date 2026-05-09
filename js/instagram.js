@@ -219,6 +219,7 @@ async function savePost() {
     if (error) throw error;
 
     closeModal('add-post-modal');
+    showToast('Post saved ✓', 'success');
     await loadInstagram();
     loadHomeStats();
   } catch (e) {
