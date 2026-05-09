@@ -10,71 +10,19 @@ const IG_ANALYSE_WEBHOOK = N8N_BASE + '/evans-ig-analyse';
 
 window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ── Auth guard ───────────────────────────────────────────────────────────────
-let osProfile = null;
-
-async function osInit() {
-  const isPreview = new URLSearchParams(window.location.search).get('preview') === '1';
-
-  let profile = null;
-  let userEmail = '';
-
-  if (isPreview) {
-    profile = { Client_UUID: 'preview', Business_name: 'Evans Automation', Owner_Name: 'Ethan Evans', is_admin: true };
-    userEmail = 'ethan@evans-automation.com';
-  } else {
-    const { data: { session } } = await window.sb.auth.getSession();
-    if (!session) {
-      window.location.href = 'https://client.portal.evans-automation.com';
-      return;
-    }
-    userEmail = session.user.email || '';
-
-    try {
-      const cached = sessionStorage.getItem('ea_profile');
-      if (cached) profile = JSON.parse(cached);
-    } catch (_) {}
-
-    if (!profile) {
-      const { data } = await window.sb
-        .from('Clients')
-        .select('Client_UUID, Business_name, Owner_Name, is_admin')
-        .eq('Auth_UUID', session.user.id)
-        .single();
-      profile = data;
-      if (profile) sessionStorage.setItem('ea_profile', JSON.stringify(profile));
-    }
-
-    if (!profile || !profile.is_admin) {
-      window.location.href = 'https://client.portal.evans-automation.com/dashboard.html';
-      return;
-    }
-  }
-
-  osProfile = profile;
-
-  // Populate sidebar user info
-  document.getElementById('sb-user-name').textContent = profile.Owner_Name || 'Ethan';
-  document.getElementById('sb-user-email').textContent = userEmail;
-
+// ── Init ─────────────────────────────────────────────────────────────────────
+function osInit() {
   // Greeting
   const now = new Date();
   const h = now.getHours();
   document.getElementById('greeting-time').textContent =
     h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening';
-  document.getElementById('greeting-name').textContent =
-    (profile.Owner_Name || 'Ethan').split(' ')[0];
+  document.getElementById('greeting-name').textContent = 'Ethan';
   document.getElementById('greeting-date').textContent =
     now.toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
 
   // Load home stats
   loadHomeStats();
-}
-
-async function osLogout() {
-  await window.sb.auth.signOut();
-  sessionStorage.removeItem('ea_profile');
-  window.location.href = 'https://client.portal.evans-automation.com';
 }
 
 // ── Navigation ───────────────────────────────────────────────────────────────
